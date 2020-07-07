@@ -25,7 +25,7 @@ GENE <-read.csv2("MUCIN PAAD COX RSEM.csv")
 head(GENE)
 
 #Select gene of interest. Remove genes without value
-GENEb <- GENE[, c(2,4,6,7,8,9,10,11,12,13,15,17,18,19,21,22)]
+GENEb <- GENE[, c(2,4,6,7,8,9,10,11,12,14,16,17,18,19,21,22)]
 head(GENEb)
 summary(GENEb)
 
@@ -73,7 +73,7 @@ ggheatmapGENE
 
 #Pearson on heatmap
 ggheatmapGENE + 
-  geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+  geom_text(aes(Var2, Var1, label = value), color = "black", size = 3) +
   theme(
     axis.title.x = element_blank(),
     axis.title.y = element_blank(),
@@ -124,6 +124,11 @@ library(FactoMineR)
 res.pca <- PCA(GENEb, ncp = 3, graph = T)
 # 2. HCPC
 res.hcpc <- HCPC(res.pca, graph = FALSE)
+
+fviz_pca_var(res.pca, col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+)
 
 #dendrogramme
 fviz_dend(res.hcpc, 
@@ -189,6 +194,34 @@ KMsurv
 coxmodel <- coxph(Surv(time,status) ~ cluster, data=SURVIE)
 summary(coxmodel)
 
+#Progression free survival
+
+
+fitPFS <- survfit(Surv(PFS.time, PFS.status)~cluster,data=SURVIE)
+view(fitPFS)
+
+#Log rank
+survdiff(Surv(PFS.time,PFS.status)~cluster,data=SURVIE)
+
+#test wilcoxon
+survdiff(Surv(PFS.time,PFS.status)~cluster,data=SURVIE,rho=1)
+
+plot(survfit(Surv(PFS.time, PFS.status)~cluster,data=SURVIE), main = "Survival curve")
+
+KMprog <- ggsurvplot(fitPFS, data=SURVIE, main = "PFS curve", pval=TRUE,
+                     font.main = 18,
+                     font.x =  16,
+                     font.y = 16,
+                     font.tickslab = 14,
+                     conf.int = TRUE,
+                     risk.table = TRUE,
+                     tables.height = 0.2,
+                     tables.theme = theme_cleantable(),
+                     palette = c("coral1", "#E7B800"))
+KMprog
+
+coxmodelPFS <- coxph(Surv(PFS.time,PFS.status) ~ cluster, data=SURVIE)
+summary(coxmodelPFS)
 
 #################################################################"
 # PART 3 - Analysis of clinical features 
@@ -269,3 +302,113 @@ pAGE
 
 anova(lm(PAAD$Mutation.Count~PAAD$cluster))
 anova(lm(PAAD$Diagnosis.Age~PAAD$cluster))
+
+#Graphs for Figure
+ggplot(PAAD, aes(x=cluster))+ 
+  geom_bar(aes(fill=Lymph.Node),position="fill",width=0.7)+ # Use "fill"
+  ggtitle("Lymph node status")+
+  xlab("Clusters")+ #X axis
+  ylab("")+ #*y axis
+  labs(fill ="Lymph nodes")+ #legend
+  scale_fill_brewer(palette="Oranges",na.value="black")+ # Color
+  theme(
+    plot.title= element_text(size=16, face="bold", hjust=0.5),# axis modification
+    axis.title.x = element_text(size=14, color ="black", face="bold"), 
+    axis.title.y = element_text(size=14, color ="black"),
+    axis.text.x = element_text(size=12, face = "bold", color ="black"),
+    axis.text.y = element_text(size=12, face="bold", color ="black"),
+    legend.title = element_text(size=14, color ="black", face="bold"),
+    legend.text = element_text(size=12, color ="black"),
+  )+
+  scale_y_continuous(labels =scales::percent_format())
+
+ggplot(PAAD, aes(x=cluster))+ 
+  geom_bar(aes(fill=Tumor.Stage),position="fill",width=0.7)+ # Use "fill"
+  ggtitle("Tumor stage")+
+  xlab("Clusters")+ #X axis
+  ylab("")+ #*y axis
+  labs(fill ="Tumor stage")+ #legend
+  scale_fill_brewer(palette="Greens",na.value="black")+ # Color
+  theme(
+    plot.title= element_text(size=16, face="bold", hjust=0.5),# axis modification
+    axis.title.x = element_text(size=14, color ="black", face="bold"), 
+    axis.title.y = element_text(size=14, color ="black"),
+    axis.text.x = element_text(size=12, face = "bold", color ="black"),
+    axis.text.y = element_text(size=12, face="bold", color ="black"),
+    legend.title = element_text(size=14, color ="black", face="bold"),
+    legend.text = element_text(size=12, color ="black"),
+  )+
+  scale_y_continuous(labels =scales::percent_format())
+
+ggplot(PAAD, aes(x=cluster))+ 
+  geom_bar(aes(fill=Histo.Grade),position="fill",width=0.7)+ # use "fill"
+  ggtitle("Histology grade")+
+  xlab("Clusters")+ #X axis
+  ylab("")+ #*y axis
+  labs(fill ="Histology grade")+ #legend
+  scale_fill_brewer(palette="Blues",na.value="black")+ # Color
+  theme(
+    plot.title= element_text(size=16, face="bold", hjust=0.5),# axis modification
+    axis.title.x = element_text(size=14, color ="black", face="bold"), 
+    axis.title.y = element_text(size=14, color ="black"),
+    axis.text.x = element_text(size=12, face = "bold", color ="black"),
+    axis.text.y = element_text(size=12, face="bold", color ="black"),
+    legend.title = element_text(size=14, color ="black", face="bold"),
+    legend.text = element_text(size=12, color ="black"),
+  )+
+  scale_y_continuous(labels =scales::percent_format())
+
+
+
+#Mucins profile in clusters
+PAADMUC <-read.csv2("MUCIN PAAD COX RSEM 2 clusters.csv")
+head(PAADMUC)
+str(PAADMUC)
+
+#clusters has to be transformed as factor (categorial values)
+PAADMUC$cluster <- as.factor(PAADMUC$cluster)
+bMUC1 <-ggplot(PAADMUC, aes(x=cluster, y=MUC1, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC1
+
+bMUC20 <-ggplot(PAADMUC, aes(x=cluster, y=MUC20, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC20
+
+bMUC4 <-ggplot(PAADMUC, aes(x=cluster, y=MUC4, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC4
+
+bMUC16 <-ggplot(PAADMUC, aes(x=cluster, y=MUC16, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC16
+
+bMUC21 <-ggplot(PAADMUC, aes(x=cluster, y=MUC21, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC21
+
+bMUC17 <-ggplot(PAADMUC, aes(x=cluster, y=MUC17, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC17
+
+bMUC15 <-ggplot(PAADMUC, aes(x=cluster, y=MUC15, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC15
+
+bMUC14 <-ggplot(PAADMUC, aes(x=cluster, y=EMCN, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC14
+
+bMUC18 <-ggplot(PAADMUC, aes(x=cluster, y=MCAM, fill=cluster)) +
+  geom_boxplot(fill=c("red2", "goldenrod1"))
+bMUC18
+
+anova(lm(PAADMUC$MUC1~PAAD$cluster))
+anova(lm(PAADMUC$MUC20~PAAD$cluster))
+anova(lm(PAADMUC$MUC4~PAAD$cluster))
+anova(lm(PAADMUC$MUC16~PAAD$cluster))
+anova(lm(PAADMUC$MUC21~PAAD$cluster))
+anova(lm(PAADMUC$MUC17~PAAD$cluster))
+anova(lm(PAADMUC$MUC15~PAAD$cluster))
+anova(lm(PAADMUC$EMCN~PAAD$cluster))
+anova(lm(PAADMUC$MCAM~PAAD$cluster))
